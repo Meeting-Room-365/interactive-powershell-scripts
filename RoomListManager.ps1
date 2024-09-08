@@ -45,8 +45,128 @@ function Show-Menu {
     Write-Host "2. Create a New Room List"
     Write-Host "3. List Resource Mailboxes"
     Write-Host "4. Fix Subjects for Room Mailboxes"
-    Write-Host "5. Exit"
-    return (Get-UserInput -Prompt "Enter your choice (1, 2, 3, 4, or 5)")
+    Write-Host "5. Reset Password for Resource Mailboxes"
+    Write-Host "6. Create a New Service User"
+    Write-Host "7. Exit"
+    return (Get-UserInput -Prompt "Enter your choice (1, 2, 3, 4, 5, 6, or 7)")
+}
+
+# Function to generate a secure password with special characters
+function Generate-SecurePassword {
+    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()"
+    $securePassword = -join ((65..90) + (97..122) + (48..57) + (33..47) | Get-Random -Count 10 | ForEach-Object { [char]$_ })
+    return $securePassword
+}
+
+# Function to create a new service user and assign management scope
+function Create-NewServiceUser {
+    # Prompt for the email address
+    $email = Get-UserInput -Prompt "Enter the email address (UPN) for the new service user:"
+
+    # Ensure the email is not blank and contains an '@' symbol
+    if ([string]::IsNullOrWhiteSpace($email) -or -not $email.Contains('@')) {
+        Write-Host "Invalid email address. Please provide a valid email."
+        return
+    }
+
+    # Extract the alias from the email address (the part before the @ symbol)
+    $alias = $email.Split('@')[0]
+
+    # Generate a secure password
+    $newPassword = Generate-SecurePassword
+    $securePassword = $newPassword | ConvertTo-SecureString -AsPlainText -Force
+
+    # Create the new service user mailbox
+    try {
+        $mailbox = New-Mailbox -Alias $alias -MicrosoftOnlineServicesID $email -Password $securePassword -Name "Service User $alias"
+        Write-Host "Service user mailbox created successfully."
+    } catch {
+        Write-Host "Failed to create service user mailbox. Error: $_"
+        return
+    }
+
+    # Create the new management scope for RoomMailboxes and Workspaces
+    try {
+        New-ManagementScope -Name "RoomMailboxesAndWorkspaces" -RecipientRestrictionFilter { RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "Workspace" }
+        Write-Host "Management scope for room mailboxes and workspaces created successfully."
+    } catch {
+        Write-Host "Failed to create management scope. Error: $_"
+    }
+
+    # Assign the new management role to the service user
+    try {
+        New-ManagementRoleAssignment –Role ApplicationImpersonation -Name "RoomMailboxManager" -User $email -CustomRecipientWriteScope "RoomMailboxesAndWorkspaces"
+        Write-Host "Management role assignment for the service user created successfully."
+    } catch {
+        Write-Host "Failed to assign management role. Error: $_"
+    }
+
+    # Display the email and password for the new service user
+    Write-Host "Service user created successfully."
+    Write-Host "Email: $email"
+    Write-Host "Password: $newPassword"
+}
+
+# Function to reset password for resource mailboxes (rooms and workspaces)
+function Reset-PasswordForResourceMailboxes {
+    Write-Host "Fetching all resource mailboxes (rooms and workspaces)..."
+
+    # Get both RoomMailboxes and workspaces
+    $roomsAndWorkspaces = Get-Mailbox -RecipientTypeDetails RoomMailbox
+    $workspaces = Get-Mailbox -Filter { ResourceType -eq 'Workspace' }
+
+    $allResources = $roomsAndWorkspaces + $workspaces
+
+    if ($allResources.Count -eq 0) {
+        Write-Host "No resource mailboxes found."
+        return
+    }
+
+    # Prepare an array for the result
+    $resourceListResults = @()
+    $i = 1
+
+    # Collect resource mailbox information for table output
+    foreach ($resource in $allResources) {
+        $resourceListResults += [PSCustomObject]@{
+            Number = $i
+            Name   = $resource.Name
+            Email  = $resource.PrimarySmtpAddress
+        }
+        $i++
+    }
+
+    # Display resource mailboxes in a table format with numbers
+    $resourceListResults | Format-Table Number, Name, Email -AutoSize
+
+    # Prompt user to select a resource mailbox by number
+    $resourceChoice = Get-UserInput -Prompt "Enter the number of the resource mailbox to reset the password, or leave blank to return to the main menu"
+
+    if ([string]::IsNullOrWhiteSpace($resourceChoice) -eq $false -and ($resourceChoice -as [int]) -le $resourceListResults.Count) {
+        $selectedResource = $resourceListResults | Where-Object { $_.Number -eq $resourceChoice }
+
+        # Confirm if the user wants to reset the password
+        $confirmReset = Get-UserInput -Prompt "Are you sure you want to reset the password for $($selectedResource.Name)? (Y/N)"
+        if ($confirmReset -eq "Y") {
+            # Generate a secure password with special characters
+            $newPassword = Generate-SecurePassword
+            $securePassword = $newPassword | ConvertTo-SecureString -AsPlainText -Force
+
+            try {
+                # Enable room mailbox account and reset the password using Set-Mailbox
+                Set-Mailbox -Identity $selectedResource.Email -EnableRoomMailboxAccount $true -RoomMailboxPassword $securePassword
+                Write-Host "Password reset successfully for $($selectedResource.Name)."
+                Write-Host "Email: $($selectedResource.Email)"
+                Write-Host "New password: $newPassword"
+            } catch {
+                Write-Host "Failed to reset the password. Error: $_"
+            }
+        } else {
+            Write-Host "Password reset cancelled."
+        }
+    } else {
+        Write-Host "Returning to the main menu..."
+    }
 }
 
 # Function to fix subjects for room mailboxes and list again
@@ -529,7 +649,7 @@ function List-ResourceMailboxes {
 
 # Main script logic
 try {
-    Show-WelcomeMessage  # Display the welcome message when the script starts
+    Show-WelcomeMessage  # Display the welcome message and clear the screen
     Write-Host "Connecting to Exchange Online..."
     Import-Module ExchangeOnlineManagement
     Connect-ExchangeOnline -ShowProgress $true -ShowBanner:$false
@@ -547,11 +667,13 @@ do {
         2 { Create-NewRoomList }
         3 { List-ResourceMailboxes }
         4 { Fix-SubjectsForRoomMailboxes }
-        5 {
+        5 { Reset-PasswordForResourceMailboxes }
+        6 { Create-NewServiceUser }
+        7 {
             Write-Host "Exiting script..."
             Write-Host "Please note, it may take up to 24 hours for room lists to sync and appear in Outlook."
             break
         }
         default { Write-Host "Invalid choice. Returning to the main menu..." }
     }
-} while ($choice -ne 5)
+} while ($choice -ne 7)
