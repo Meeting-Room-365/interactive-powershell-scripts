@@ -61,7 +61,7 @@ function Generate-SecurePassword {
 # Function to create a new service user and assign management scope
 function Create-NewServiceUser {
     # Prompt for the email address
-    $email = Get-UserInput -Prompt "Enter the email address (UPN) for the new service user:"
+    $email = Get-UserInput -Prompt "Enter the email address for the new service user:"
 
     # Ensure the email is not blank and contains an '@' symbol
     if ([string]::IsNullOrWhiteSpace($email) -or -not $email.Contains('@')) {
@@ -85,18 +85,18 @@ function Create-NewServiceUser {
         return
     }
 
-    # Create the new management scope for RoomMailboxes and Workspaces
+    # Create the new management scope for RoomMailboxes, Workspaces, and Equipment mailboxes
     try {
-        New-ManagementScope -Name "RoomMailboxesAndWorkspaces" -RecipientRestrictionFilter { RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "Workspace" }
-        Write-Host "Management scope for room mailboxes and workspaces created successfully."
+        New-ManagementScope -Name "RoomWorkspacesAndEquipment" -RecipientRestrictionFilter { RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "Workspace" -or RecipientTypeDetails -eq "EquipmentMailbox" }
+        Write-Host "Management scope for room mailboxes, workspaces, and equipment created successfully."
     } catch {
         Write-Host "Failed to create management scope. Error: $_"
     }
 
-    # Assign the new management role to the service user
+    # Assign the ApplicationImpersonation role and the management role to the service user
     try {
-        New-ManagementRoleAssignment –Role ApplicationImpersonation -Name "RoomMailboxManager" -User $email -CustomRecipientWriteScope "RoomMailboxesAndWorkspaces"
-        Write-Host "Management role assignment for the service user created successfully."
+        New-ManagementRoleAssignment -Name "RoomMailboxManager" -Role "ApplicationImpersonation" -User $email -CustomRecipientWriteScope "RoomWorkspacesAndEquipment"
+        Write-Host "ApplicationImpersonation role and management role assignment for the service user created successfully."
     } catch {
         Write-Host "Failed to assign management role. Error: $_"
     }
