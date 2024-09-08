@@ -17,6 +17,7 @@ function Show-WelcomeMessage {
 #+#       #+# #+#        #+#            #+#         #+#     #+#   #+#+# #+#    #+#  #+#    #+# #+#    #+# #+#    #+# #+#       #+#  #+#    #+# #+#    #+# #+#    #+#
 ###       ### ########## ##########     ###     ########### ###    ####  ########   ###    ###  ########   ########  ###       ###   ########   ########   ########
 "@
+
     Write-Host $asciiArt
     Write-Host ""
     Write-Host "---------------------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -24,6 +25,8 @@ function Show-WelcomeMessage {
     Write-Host "(c) Copyright 2024 Meeting Room 365 llc. All Rights Reserved."
     Write-Host "Visit www.meetingroom365.com for more details."
     Write-Host "---------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    Write-Host ""
+    Write-Host "Tip: resize this window until you can see the logo above. This will help display large tables correctly." -ForegroundColor Yellow
     Write-Host ""
 }
 
