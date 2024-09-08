@@ -21,7 +21,19 @@ Used to create meeting rooms and workspaces, create room lists (for room finder)
 
 Can also run a script to fix subjects for newly-created Meeting Room resource mailboxes.
 
+### Current Feature List
+- Create a Resource Mailbox (Room or Workspace)
+- Create a Room list
+- Assign or remove Resources from a Room List
+- Update Resource Place properties like building, city, state, zip, country, floor, and capacity
+- Rename a resource
+- Fix AddOrganizerToSubject property for newly-created Room Resources
+- Reset a password for a room resource (to add it to Meeting Room 365)
+- Create a service user with access to all resources
+
 [View PowerShell Script](./RoomListManager.ps1)
+
+[Download this Repository as a ZIP](https://github.com/Meeting-Room-365/interactive-powershell-scripts/archive/refs/heads/main.zip)
 
 -----
 
