@@ -30,6 +30,20 @@ function Show-WelcomeMessage {
     Write-Host ""
 }
 
+# Function to check and install a module if it's missing
+function Ensure-ModuleInstalled {
+    param (
+        [string]$ModuleName
+    )
+
+    if (!(Get-Module -ListAvailable -Name $ModuleName)) {
+        Write-Host "Installing module $ModuleName..."
+        Install-Module -Name $ModuleName -Force -Confirm:$false
+    } else {
+        Write-Host "Module $ModuleName is already installed."
+    }
+}
+
 # Function to get interactive input
 function Get-UserInput {
     param (
@@ -653,6 +667,7 @@ function List-ResourceMailboxes {
 # Main script logic
 try {
     Show-WelcomeMessage  # Display the welcome message and clear the screen
+    Ensure-ModuleInstalled -ModuleName "ExchangeOnlineManagement" # Ensure Exchange Online Management module is installed
     Write-Host "Connecting to Exchange Online..."
     Import-Module ExchangeOnlineManagement
     Connect-ExchangeOnline -ShowProgress $true -ShowBanner:$false
