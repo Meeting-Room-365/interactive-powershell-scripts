@@ -22,7 +22,7 @@ function Show-WelcomeMessage {
     Write-Host ""
     Write-Host "---------------------------------------------------------------------------------------------------------------------------------------------------------------------"
     Write-Host "Welcome to the Meeting Room 365 Room List Manager. Feel free to share this script as long as the copyright and welcome message is in-tact."
-    Write-Host "(c) Copyright 2024 Meeting Room 365 llc. All Rights Reserved."
+    Write-Host "(c) Copyright 2024-2025 Meeting Room 365 llc. All Rights Reserved."
     Write-Host "Visit www.meetingroom365.com for more details."
     Write-Host "---------------------------------------------------------------------------------------------------------------------------------------------------------------------"
     Write-Host ""
@@ -77,6 +77,9 @@ function Generate-SecurePassword {
 
 # Function to create a new service user and assign management scope
 function Create-NewServiceUser {
+    # Define Application (App) ID for Meeting Room 365
+    $AppId = "2a636d8a-e912-4095-9dea-4b3e23776acc"
+
     # Prompt for the email address
     $email = Get-UserInput -Prompt "Enter the email address for the new service user:"
 
@@ -89,33 +92,87 @@ function Create-NewServiceUser {
     # Extract the alias from the email address (the part before the @ symbol)
     $alias = $email.Split('@')[0]
 
+    # Prompt for optional Service Principal Object ID
+    $ServicePrincipalId = Get-UserInput -Prompt "Enter the ServicePrincipalId (leave blank to auto-detect):"
+    if ([string]::IsNullOrWhiteSpace($ServicePrincipalId)) {
+        Write-Host "Auto-detecting Service Principal ID for AppId $AppId..."
+        try {
+            Connect-AzAccount -ErrorAction Stop
+        } catch {
+            Write-Host "Failed to authenticate with Azure. Error: $_"
+            return
+        }
+        $servicePrincipal = Get-AzADServicePrincipal -ApplicationId $AppId
+        if (-not $servicePrincipal) {
+            Write-Host "Unable to find a Service Principal for AppId $AppId. Please check your Azure context."
+            return
+        }
+        $ServicePrincipalId = $servicePrincipal.Id
+        Write-Host "Detected ServicePrincipalId: $ServicePrincipalId"
+    }
+
     # Generate a secure password
     $newPassword = Generate-SecurePassword
     $securePassword = $newPassword | ConvertTo-SecureString -AsPlainText -Force
 
     # Create the new service user mailbox
     try {
-        $mailbox = New-Mailbox -Alias $alias -MicrosoftOnlineServicesID $email -Password $securePassword -Name "Service User $alias"
-        Write-Host "Service user mailbox created successfully."
+        $existingMailbox = Get-Mailbox -Identity $email -ErrorAction SilentlyContinue
+        if ($existingMailbox) {
+            Write-Host "Mailbox for $email already exists. Skipping creation."
+        } else {
+            $mailbox = New-Mailbox -Alias $alias -MicrosoftOnlineServicesID $email -Password $securePassword -Name "Service User $alias"
+            Write-Host "Service user mailbox created successfully."
+        }
     } catch {
-        Write-Host "Failed to create service user mailbox. Error: $_"
+        Write-Host "Failed to create or verify service user mailbox. Error: $_"
         return
     }
 
     # Create the new management scope for RoomMailboxes, Workspaces, and Equipment mailboxes
     try {
-        New-ManagementScope -Name "RoomWorkspacesAndEquipment" -RecipientRestrictionFilter { RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "Workspace" -or RecipientTypeDetails -eq "EquipmentMailbox" }
-        Write-Host "Management scope for room mailboxes, workspaces, and equipment created successfully."
+        Write-Host "Creating management scope 'ResourceMailboxesScope'..."
+        if (-not (Get-ManagementScope -Identity "ResourceMailboxesScope" -ErrorAction SilentlyContinue)) {
+            New-ManagementScope -Name "ResourceMailboxesScope" `
+                -RecipientRestrictionFilter { RecipientTypeDetails -eq "RoomMailbox" -or RecipientTypeDetails -eq "Workspace" -or RecipientTypeDetails -eq "EquipmentMailbox" }
+            Write-Host "Management scope created."
+        } else {
+            Write-Host "Management scope 'ResourceMailboxesScope' already exists."
+        }
     } catch {
         Write-Host "Failed to create management scope. Error: $_"
     }
 
-    # Assign the ApplicationImpersonation role and the management role to the service user
+    # Register service principal in Exchange Online
+    Write-Host "Registering service principal..."
     try {
-        New-ManagementRoleAssignment -Name "RoomMailboxManager" -Role "ApplicationImpersonation" -User $email -CustomRecipientWriteScope "RoomWorkspacesAndEquipment"
-        Write-Host "ApplicationImpersonation role and management role assignment for the service user created successfully."
+        $existingSp = Get-ServicePrincipal -ErrorAction SilentlyContinue | Where-Object { $_.ExternalDirectoryObjectId -eq $AppId }
+
+        if (-not $existingSp) {
+            New-ServicePrincipal -AppId $AppId -ObjectId $ServicePrincipalId -DisplayName "Meeting Room 365 Production App"
+            Write-Host "Service principal registered."
+        } else {
+            Write-Host "Service principal already registered."
+        }
     } catch {
-        Write-Host "Failed to assign management role. Error: $_"
+        Write-Host "Failed to register service principal: $_"
+    }
+
+    # Assign Application Calendars.ReadWrite role
+    Write-Host "Assigning 'Application Calendars.ReadWrite' role..."
+    
+    $existingAssignment = Get-ManagementRoleAssignment -Role "Application Calendars.ReadWrite" -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -eq "ResourceMailboxesAccess"
+    }
+
+    if (-not $existingAssignment) {
+        New-ManagementRoleAssignment -Name "ResourceMailboxesAccess" `
+            -Role "Application Calendars.ReadWrite" `
+            -App $AppId `
+            -CustomResourceScope "ResourceMailboxesScope"
+        Write-Host "Role assignment created."
+    } else {
+        Write-Host "Role assignment 'ResourceMailboxesAccess' already exists."
     }
 
     # Display the email and password for the new service user
