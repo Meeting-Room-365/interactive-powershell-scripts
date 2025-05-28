@@ -79,3 +79,9 @@ pwsh
 
 ./RoomListManager.ps1
 ```
+
+# Powershell Modules
+
+### Az
+
+https://learn.microsoft.com/en-us/powershell/azure/install-azure-powershell?view=azps-14.0.0
