@@ -33,6 +33,12 @@ Can also run a script to fix subjects for newly-created Meeting Room resource ma
 
 [View PowerShell Script](./RoomListManager.ps1)
 
+-----
+## Anti-Spam Wizard
+Interactive wizard for setting up anti-spam and anti-phishing policies in Microsoft 365. Configures hosted content filter policies with tenant-wide or group-based scoping. Saves configuration to a JSON profile for easy re-runs.
+
+[View PowerShell Script](./AntiSpamWizard.ps1)
+
 [Download this Repository as a ZIP](https://github.com/Meeting-Room-365/interactive-powershell-scripts/archive/refs/heads/main.zip)
 
 -----
