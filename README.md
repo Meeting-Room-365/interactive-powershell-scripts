@@ -39,6 +39,12 @@ Interactive wizard for setting up anti-spam and anti-phishing policies in Micros
 
 [View PowerShell Script](./AntiSpamWizard.ps1)
 
+-----
+## Entra ID Self-Service Profile Setup
+Interactive wizard for configuring tenant-level settings that affect user self-service profile editing in Entra ID.
+
+[View PowerShell Script](./EnableEntraSelfService.ps1)
+
 [Download this Repository as a ZIP](https://github.com/Meeting-Room-365/interactive-powershell-scripts/archive/refs/heads/main.zip)
 
 -----
