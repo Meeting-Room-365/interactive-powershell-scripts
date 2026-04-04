@@ -370,26 +370,34 @@ function Display-RoomListResources {
             $state = $placeDetails.State
             $label = $placeDetails.Label
             $type = $placeDetails.Type
+            $audioDeviceName = $placeDetails.AudioDeviceName
+            $videoDeviceName = $placeDetails.VideoDeviceName
+            $displayDeviceName = $placeDetails.DisplayDeviceName
+            $isWheelChairAccessible = $placeDetails.IsWheelChairAccessible
 
             $memberListResults += [PSCustomObject]@{
-                Number          = $j
-                Name            = $member.Name
-                Email           = $member.PrimarySmtpAddress
-                Type            = $type
-                Capacity        = $capacity
-                Building        = $building
-                Floor           = $floor
-                City            = $location
-                State           = $state
-                PostalCode      = $postalCode
-                CountryOrRegion = $countryOrRegion
-                Label           = $label
+                Number                 = $j
+                Name                   = $member.Name
+                Email                  = $member.PrimarySmtpAddress
+                Type                   = $type
+                Capacity               = $capacity
+                Building               = $building
+                Floor                  = $floor
+                City                   = $location
+                State                  = $state
+                PostalCode             = $postalCode
+                CountryOrRegion        = $countryOrRegion
+                Label                  = $label
+                AudioDeviceName        = $audioDeviceName
+                VideoDeviceName        = $videoDeviceName
+                DisplayDeviceName      = $displayDeviceName
+                IsWheelChairAccessible = $isWheelChairAccessible
             }
             $j++
         }
 
         Write-Host "Resources in $($selectedRoomList.Name):"
-        $memberListResults | Format-Table Number, Name, Email, Type, Capacity, Building, Floor, City, State, PostalCode, CountryOrRegion, Label -AutoSize
+        $memberListResults | Format-Table Number, Name, Email, Type, Capacity, Building, Floor, City, State, PostalCode, CountryOrRegion, Label, AudioDeviceName, VideoDeviceName, DisplayDeviceName, IsWheelChairAccessible -AutoSize
     }
 
     # Prompt to add, remove, or modify a resource
@@ -581,6 +589,10 @@ function Update-ResourceProperties {
     $newPostalCode = Get-UserInput -Prompt "Enter new postal code for the resource (leave blank to skip):"
     $newCountryOrRegion = Get-UserInput -Prompt "Enter new country/region for the resource (leave blank to skip):"
     $newLabel = Get-UserInput -Prompt "Enter new label for the resource (leave blank to skip):"
+    $newAudioDeviceName = Get-UserInput -Prompt "Enter new audio device name for the resource (leave blank to skip):"
+    $newVideoDeviceName = Get-UserInput -Prompt "Enter new video device name for the resource (leave blank to skip):"
+    $newDisplayDeviceName = Get-UserInput -Prompt "Enter new display device name for the resource (leave blank to skip):"
+    $newIsWheelChairAccessibleRaw = Get-UserInput -Prompt "Enter `$true or `$false for wheelchair accessible (leave blank to skip):"
 
     # Prepare parameters for Set-Place
     $params = @{}
@@ -593,6 +605,15 @@ function Update-ResourceProperties {
     if (-not [string]::IsNullOrEmpty($newPostalCode)) { $params['PostalCode'] = $newPostalCode }
     if (-not [string]::IsNullOrEmpty($newCountryOrRegion)) { $params['CountryOrRegion'] = $newCountryOrRegion }
     if (-not [string]::IsNullOrEmpty($newLabel)) { $params['Label'] = $newLabel }
+    if (-not [string]::IsNullOrEmpty($newAudioDeviceName)) { $params['AudioDeviceName'] = $newAudioDeviceName }
+    if (-not [string]::IsNullOrEmpty($newVideoDeviceName)) { $params['VideoDeviceName'] = $newVideoDeviceName }
+    if (-not [string]::IsNullOrEmpty($newDisplayDeviceName)) { $params['DisplayDeviceName'] = $newDisplayDeviceName }
+    if (-not [string]::IsNullOrEmpty($newIsWheelChairAccessibleRaw)) {
+        $parsed = $newIsWheelChairAccessibleRaw.Trim().ToLower()
+        if ($parsed -eq '$true' -or $parsed -eq 'true') { $params['IsWheelChairAccessible'] = $true }
+        elseif ($parsed -eq '$false' -or $parsed -eq 'false') { $params['IsWheelChairAccessible'] = $false }
+        else { Write-Host "Invalid value for IsWheelChairAccessible. Use `$true or `$false. Skipping." -ForegroundColor Yellow }
+    }
 
     # If a new name is provided, update it with Set-Mailbox
     if (-not [string]::IsNullOrEmpty($newName)) {
@@ -673,27 +694,35 @@ function List-ResourceMailboxes {
         $state = $placeDetails.State
         $label = $placeDetails.Label
         $type = $placeDetails.Type
+        $audioDeviceName = $placeDetails.AudioDeviceName
+        $videoDeviceName = $placeDetails.VideoDeviceName
+        $displayDeviceName = $placeDetails.DisplayDeviceName
+        $isWheelChairAccessible = $placeDetails.IsWheelChairAccessible
 
         $resourceListResults += [PSCustomObject]@{
-            Number          = $i
-            Name            = $resource.Name
-            Email           = $resource.PrimarySmtpAddress
-            MemberOfGroups  = $membership
-            Type            = $type
-            Capacity        = $capacity
-            Building        = $building
-            Floor           = $floor
-            City            = $location
-            State           = $state
-            PostalCode      = $postalCode
-            CountryOrRegion = $countryOrRegion
-            Label           = $label
+            Number                 = $i
+            Name                   = $resource.Name
+            Email                  = $resource.PrimarySmtpAddress
+            MemberOfGroups         = $membership
+            Type                   = $type
+            Capacity               = $capacity
+            Building               = $building
+            Floor                  = $floor
+            City                   = $location
+            State                  = $state
+            PostalCode             = $postalCode
+            CountryOrRegion        = $countryOrRegion
+            Label                  = $label
+            AudioDeviceName        = $audioDeviceName
+            VideoDeviceName        = $videoDeviceName
+            DisplayDeviceName      = $displayDeviceName
+            IsWheelChairAccessible = $isWheelChairAccessible
         }
         $i++
     }
 
     # Display resources as a numbered list with memberships and additional details
-    $resourceListResults | Format-Table Number, Name, Email, Type, Capacity, Building, Floor, City, State, PostalCode, CountryOrRegion, Label, MemberOfGroups -AutoSize
+    $resourceListResults | Format-Table Number, Name, Email, Type, Capacity, Building, Floor, City, State, PostalCode, CountryOrRegion, Label, AudioDeviceName, VideoDeviceName, DisplayDeviceName, IsWheelChairAccessible, MemberOfGroups -AutoSize
 
     # Prompt user to select a resource by number
     $resourceChoice = Get-UserInput -Prompt "Enter the number of the resource to add to or remove from a room list, or leave blank to return to the main menu"
