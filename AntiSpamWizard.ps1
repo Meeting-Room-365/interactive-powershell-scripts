@@ -22,6 +22,18 @@
 $ErrorActionPreference = "Stop"
 
 # -------------------------
+# Helpers
+# -------------------------
+function Ask-YesNo([string]$prompt, [string]$default = "y") {
+  $suffix = if ($default) { " [$default]" } else { "" }
+  while ($true) {
+    $ans = Read-Host "$prompt$suffix"
+    if (-not $ans -and $default) { $ans = $default }
+    if ($ans -in @("y","n")) { return ($ans -eq "y") }
+  }
+}
+
+# -------------------------
 # Initialization
 # -------------------------
 $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -75,6 +87,9 @@ if (Test-Path $ProfilePath) {
     }
     Write-Host "  Bulk threshold: $($savedProfile.antiSpam.bulkThreshold)"
     Write-Host "  Impersonation:  $($savedProfile.antiPhish.enableImpersonation)"
+    if ($savedProfile.organization -and $savedProfile.organization.rejectDirectSend) {
+      Write-Host "  Block Direct Send: $($savedProfile.organization.rejectDirectSend)"
+    }
     Write-Host ""
     $useProfileResponse = Read-Host "Use this profile? (y/n) [y]"
     if (-not $useProfileResponse -or $useProfileResponse -eq "y") {
@@ -139,6 +154,19 @@ if ($useProfile) {
 Write-Host ""
 
 # -------------------------
+# Wizard: Direct Send
+# -------------------------
+if ($useProfile) {
+  $blockDirectSend = if ($savedProfile.organization -and $savedProfile.organization.rejectDirectSend) { $true } else { $false }
+  Write-Host "Using profile settings:" -ForegroundColor Cyan
+  Write-Host "  Block Direct Send: $blockDirectSend" -ForegroundColor Cyan
+} else {
+  $blockDirectSend = Ask-YesNo "Block unauthenticated Direct Send (recommended for security)?"
+}
+
+Write-Host ""
+
+# -------------------------
 # Build profile object
 # -------------------------
 $profile = @{
@@ -167,6 +195,10 @@ $profile = @{
   quarantine = @{
     userCanReleaseSpam  = ($fpTolerance -ne "low")
     userCanReleasePhish = $false
+  }
+
+  organization = @{
+    rejectDirectSend = $blockDirectSend
   }
 }
 
@@ -265,6 +297,17 @@ if ($profile.antiPhish.enableImpersonation) {
 }
 
 # -------------------------
+# Organization Config: Direct Send
+# -------------------------
+if ($blockDirectSend) {
+  Write-Host "Blocking unauthenticated Direct Send..."
+  Set-OrganizationConfig -RejectDirectSend $true
+  Write-Host "Note: This may affect printers, scanners, or legacy apps."
+} else {
+  Write-Host "Leaving Direct Send enabled."
+}
+
+# -------------------------
 # Final summary
 # -------------------------
 Write-Host ""
@@ -277,5 +320,6 @@ if ($profile.scope.mode -eq "group") {
 }
 Write-Host "Bulk threshold:  $bulkLevel"
 Write-Host "Impersonation:   $($profile.antiPhish.enableImpersonation)"
+Write-Host "Block Direct Send: $blockDirectSend"
 Write-Host ""
 Write-Host "You can safely re-run this script at any time."
