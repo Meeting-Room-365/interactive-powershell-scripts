@@ -189,7 +189,7 @@ function Reset-PasswordForResourceMailboxes {
     $roomsAndWorkspaces = Get-Mailbox -RecipientTypeDetails RoomMailbox
     $workspaces = Get-Mailbox -Filter { ResourceType -eq 'Workspace' }
 
-    $allResources = $roomsAndWorkspaces + $workspaces
+    $allResources = @($roomsAndWorkspaces) + @($workspaces)
 
     if ($allResources.Count -eq 0) {
         Write-Host "No resource mailboxes found."
@@ -646,7 +646,7 @@ function List-ResourceMailboxes {
     $roomsAndWorkspaces = Get-Mailbox -RecipientTypeDetails RoomMailbox
     $workspaces = Get-Mailbox -Filter { ResourceType -eq 'Workspace' }
 
-    $allResources = $roomsAndWorkspaces + $workspaces
+    $allResources = @($roomsAndWorkspaces) + @($workspaces)
 
     if ($allResources.Count -eq 0) {
         Write-Host "No resource mailboxes found."
