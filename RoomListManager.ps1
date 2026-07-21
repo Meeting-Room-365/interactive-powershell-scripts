@@ -70,8 +70,27 @@ function Show-Menu {
 
 # Function to generate a secure password with special characters
 function Generate-SecurePassword {
-    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()"
-    $securePassword = -join ((65..90) + (97..122) + (48..57) + (33..47) | Get-Random -Count 10 | ForEach-Object { [char]$_ })
+    # Build a password that satisfies Microsoft 365 complexity requirements by
+    # guaranteeing at least one uppercase, lowercase, digit, and special character.
+    $upper   = [char[]](65..90)   # A-Z
+    $lower   = [char[]](97..122)  # a-z
+    $digits  = [char[]](48..57)   # 0-9
+    $special = '!@#$%^&*()-_+='.ToCharArray()
+
+    # One character guaranteed from each required category
+    $passwordChars = @(
+        $upper   | Get-Random
+        $lower   | Get-Random
+        $digits  | Get-Random
+        $special | Get-Random
+    )
+
+    # Fill the remaining length from the combined pool (16 characters total)
+    $allChars = $upper + $lower + $digits + $special
+    $passwordChars += 1..12 | ForEach-Object { $allChars | Get-Random }
+
+    # Shuffle so the guaranteed characters aren't always at the front
+    $securePassword = -join ($passwordChars | Sort-Object { Get-Random })
     return $securePassword
 }
 
