@@ -263,7 +263,11 @@ function Fix-SubjectsForRoomMailboxes {
         # Collect room mailbox information for table output, including the status of AddOrganizerToSubject
         $i = 1
         foreach ($room in $roomMailboxes) {
-            $calendarProcessing = Get-CalendarProcessing -Identity $room.PrimarySmtpAddress
+            try {
+                $calendarProcessing = Get-CalendarProcessing -Identity $room.PrimarySmtpAddress -ErrorAction Stop
+            } catch {
+                $calendarProcessing = $null
+            }
             $addOrganizerToSubject = $calendarProcessing.AddOrganizerToSubject
 
             $roomMailboxResults += [PSCustomObject]@{
@@ -363,7 +367,12 @@ function Display-RoomListResources {
         $memberListResults = @()
         $j = 1
         foreach ($member in $members) {
-            $placeDetails = Get-Place -Identity $member.PrimarySmtpAddress
+            try {
+                $placeDetails = Get-Place -Identity $member.PrimarySmtpAddress -ErrorAction Stop
+            } catch {
+                # Some newer resource types (e.g. Desk) aren't supported by Get-Place; show blank details instead of erroring
+                $placeDetails = $null
+            }
             $building = $placeDetails.Building
             $capacity = $placeDetails.Capacity
             $location = $placeDetails.City
@@ -690,7 +699,12 @@ function List-ResourceMailboxes {
             $membership = $membership -join ", "
         }
 
-        $placeDetails = Get-Place -Identity $resource.PrimarySmtpAddress
+        try {
+            $placeDetails = Get-Place -Identity $resource.PrimarySmtpAddress -ErrorAction Stop
+        } catch {
+            # Some newer resource types (e.g. Desk) aren't supported by Get-Place; show blank details instead of erroring
+            $placeDetails = $null
+        }
         $building = $placeDetails.Building
         $capacity = $placeDetails.Capacity
         $location = $placeDetails.City
