@@ -216,8 +216,9 @@ function Reset-PasswordForResourceMailboxes {
     # Prompt user to select a resource mailbox by number
     $resourceChoice = Get-UserInput -Prompt "Enter the number of the resource mailbox to reset the password, or leave blank to return to the main menu"
 
-    if ([string]::IsNullOrWhiteSpace($resourceChoice) -eq $false -and ($resourceChoice -as [int]) -le $resourceListResults.Count) {
-        $selectedResource = $resourceListResults | Where-Object { $_.Number -eq $resourceChoice }
+    $resourceNum = $resourceChoice -as [int]
+    if ($null -ne $resourceNum -and $resourceNum -ge 1 -and $resourceNum -le $resourceListResults.Count) {
+        $selectedResource = $resourceListResults | Where-Object { $_.Number -eq $resourceNum }
 
         # Confirm if the user wants to reset the password
         $confirmReset = Get-UserInput -Prompt "Are you sure you want to reset the password for $($selectedResource.Name)? (Y/N)"
@@ -249,7 +250,7 @@ function Fix-SubjectsForRoomMailboxes {
         Write-Host "Fetching all room mailboxes..."
 
         # Get all room mailboxes
-        $roomMailboxes = Get-Mailbox -RecipientTypeDetails RoomMailbox
+        $roomMailboxes = @(Get-Mailbox -RecipientTypeDetails RoomMailbox)
 
         if ($roomMailboxes.Count -eq 0) {
             Write-Host "No room mailboxes found."
@@ -280,8 +281,9 @@ function Fix-SubjectsForRoomMailboxes {
         # Prompt user to select a room mailbox by number
         $roomChoice = Get-UserInput -Prompt "Enter the number of the room mailbox to fix the subject handling, or leave blank to return to the main menu"
 
-        if ([string]::IsNullOrWhiteSpace($roomChoice) -eq $false -and ($roomChoice -as [int]) -le $roomMailboxResults.Count) {
-            $selectedRoom = $roomMailboxResults | Where-Object { $_.Number -eq $roomChoice }
+        $roomNum = $roomChoice -as [int]
+        if ($null -ne $roomNum -and $roomNum -ge 1 -and $roomNum -le $roomMailboxResults.Count) {
+            $selectedRoom = $roomMailboxResults | Where-Object { $_.Number -eq $roomNum }
 
             try {
                 # Run the Set-CalendarProcessing command on the selected room mailbox
@@ -305,7 +307,7 @@ function Show-RoomLists {
     Write-Host "Fetching all room lists..."
 
     # Get all room lists
-    $roomLists = Get-DistributionGroup -RecipientTypeDetails RoomList
+    $roomLists = @(Get-DistributionGroup -RecipientTypeDetails RoomList)
 
     if ($roomLists.Count -eq 0) {
         Write-Host "No room lists found."
@@ -332,8 +334,9 @@ function Show-RoomLists {
     # Prompt user to select a room list by number
     $listChoice = Get-UserInput -Prompt "Enter the number of the room list to view resources, or leave blank to return to the main menu"
 
-    if ([string]::IsNullOrWhiteSpace($listChoice) -eq $false -and ($listChoice -as [int]) -le $roomListResults.Count) {
-        $selectedRoomList = $roomListResults | Where-Object { $_.Number -eq $listChoice }
+    $listNum = $listChoice -as [int]
+    if ($null -ne $listNum -and $listNum -ge 1 -and $listNum -le $roomListResults.Count) {
+        $selectedRoomList = $roomListResults | Where-Object { $_.Number -eq $listNum }
         if ($selectedRoomList) {
             Display-RoomListResources $selectedRoomList
         } else {
@@ -351,7 +354,7 @@ function Display-RoomListResources {
     )
 
     Write-Host "Fetching resources in the room list: $($selectedRoomList.Name)..."
-    $members = Get-DistributionGroupMember -Identity $selectedRoomList.Email
+    $members = @(Get-DistributionGroupMember -Identity $selectedRoomList.Email)
 
     if ($members.Count -eq 0) {
         Write-Host "No resources found in the selected room list."
@@ -413,8 +416,9 @@ function Display-RoomListResources {
         'remove' {
             if ($members.Count -gt 0) {
                 $resourceToRemove = Get-UserInput -Prompt "Enter the number of the resource to remove from the list"
-                if ([int]$resourceToRemove -le $members.Count -and [int]$resourceToRemove -ge 1) {
-                    $selectedResource = $memberListResults | Where-Object { $_.Number -eq $resourceToRemove }
+                $removeNum = $resourceToRemove -as [int]
+                if ($null -ne $removeNum -and $removeNum -ge 1 -and $removeNum -le $members.Count) {
+                    $selectedResource = $memberListResults | Where-Object { $_.Number -eq $removeNum }
                     Remove-ResourceFromRoomList -roomListAlias $selectedRoomList.Email -resourceEmail $selectedResource.Email
                     Display-RoomListResources $selectedRoomList  # Refresh the list after removing
                     return
@@ -431,8 +435,9 @@ function Display-RoomListResources {
         'modify' {
             if ($members.Count -gt 0) {
                 $resourceToUpdate = Get-UserInput -Prompt "Enter the number of the resource to update properties"
-                if ([int]$resourceToUpdate -le $members.Count -and [int]$resourceToUpdate -ge 1) {
-                    $selectedResource = $memberListResults | Where-Object { $_.Number -eq $resourceToUpdate }
+                $updateNum = $resourceToUpdate -as [int]
+                if ($null -ne $updateNum -and $updateNum -ge 1 -and $updateNum -le $members.Count) {
+                    $selectedResource = $memberListResults | Where-Object { $_.Number -eq $updateNum }
                     Update-ResourceProperties -resourceEmail $selectedResource.Email
                     Write-Host "Refreshing the list of resources in the room list after updating..."
                     Display-RoomListResources $selectedRoomList  # Refresh the list after updating
@@ -511,7 +516,7 @@ function Add-ResourceToRoomList {
 
     # Display room lists as a numbered list
     Write-Host "Fetching all room lists..."
-    $roomLists = Get-DistributionGroup -RecipientTypeDetails RoomList
+    $roomLists = @(Get-DistributionGroup -RecipientTypeDetails RoomList)
 
     if ($roomLists.Count -eq 0) {
         Write-Host "No room lists found."
@@ -536,8 +541,9 @@ function Add-ResourceToRoomList {
     # Prompt user to select a room list by number to add the resource to
     $roomListChoice = Get-UserInput -Prompt "Enter the number of the room list to add the resource to, or leave blank to return to the main menu"
 
-    if ([string]::IsNullOrWhiteSpace($roomListChoice) -eq $false -and ($roomListChoice -as [int]) -le $roomListResults.Count) {
-        $selectedRoomList = $roomListResults | Where-Object { $_.Number -eq $roomListChoice }
+    $roomListNum = $roomListChoice -as [int]
+    if ($null -ne $roomListNum -and $roomListNum -ge 1 -and $roomListNum -le $roomListResults.Count) {
+        $selectedRoomList = $roomListResults | Where-Object { $_.Number -eq $roomListNum }
         try {
             Add-DistributionGroupMember -Identity $selectedRoomList.Email -Member $selectedResource.Email
             Write-Host "Resource '$($selectedResource.Name)' added to the room list '$($selectedRoomList.Name)'."
@@ -727,8 +733,9 @@ function List-ResourceMailboxes {
     # Prompt user to select a resource by number
     $resourceChoice = Get-UserInput -Prompt "Enter the number of the resource to add to or remove from a room list, or leave blank to return to the main menu"
 
-    if ([string]::IsNullOrWhiteSpace($resourceChoice) -eq $false -and ($resourceChoice -as [int]) -le $resourceListResults.Count) {
-        $selectedResource = $resourceListResults | Where-Object { $_.Number -eq $resourceChoice }
+    $resourceNum = $resourceChoice -as [int]
+    if ($null -ne $resourceNum -and $resourceNum -ge 1 -and $resourceNum -le $resourceListResults.Count) {
+        $selectedResource = $resourceListResults | Where-Object { $_.Number -eq $resourceNum }
 
         if ($selectedResource.MemberOfGroups -eq "None") {
             Write-Host "The selected resource is not a member of any room list."
