@@ -761,7 +761,46 @@ function List-ResourceMailboxes {
             if ($actionChoice -eq "add") {
                 Add-ResourceToRoomList $selectedResource
             } elseif ($actionChoice -eq "remove") {
-                Remove-ResourceFromRoomList $selectedResource
+                # A resource can belong to several lists, so resolve which one to remove it from.
+                # Reuse the cached memberships gathered above.
+                $memberOfGroups = @()
+                foreach ($group in $distributionGroups) {
+                    $cachedMembers = $groupMembers[$group.Alias]
+                    if ($cachedMembers | Where-Object { $_.PrimarySmtpAddress -eq $selectedResource.Email }) {
+                        $memberOfGroups += [PSCustomObject]@{
+                            Name  = $group.Name
+                            Email = $group.PrimarySmtpAddress
+                        }
+                    }
+                }
+
+                if ($memberOfGroups.Count -eq 0) {
+                    Write-Host "The selected resource is not a member of any room list."
+                } elseif ($memberOfGroups.Count -eq 1) {
+                    Remove-ResourceFromRoomList -roomListAlias $memberOfGroups[0].Email -resourceEmail $selectedResource.Email
+                } else {
+                    # Present the lists the resource belongs to and let the user choose
+                    $groupChoiceResults = @()
+                    $k = 1
+                    foreach ($g in $memberOfGroups) {
+                        $groupChoiceResults += [PSCustomObject]@{
+                            Number = $k
+                            Name   = $g.Name
+                            Email  = $g.Email
+                        }
+                        $k++
+                    }
+                    $groupChoiceResults | Format-Table Number, Name, Email -AutoSize
+
+                    $groupChoice = Get-UserInput -Prompt "Enter the number of the room list to remove this resource from, or leave blank to cancel"
+                    $groupNum = $groupChoice -as [int]
+                    if ($null -ne $groupNum -and $groupNum -ge 1 -and $groupNum -le $groupChoiceResults.Count) {
+                        $selectedGroup = $groupChoiceResults | Where-Object { $_.Number -eq $groupNum }
+                        Remove-ResourceFromRoomList -roomListAlias $selectedGroup.Email -resourceEmail $selectedResource.Email
+                    } else {
+                        Write-Host "Cancelled. Returning to the main menu..."
+                    }
+                }
             } else {
                 Write-Host "Invalid input. Returning to the main menu..."
             }
