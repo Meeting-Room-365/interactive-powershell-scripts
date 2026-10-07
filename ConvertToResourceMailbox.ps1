@@ -40,6 +40,11 @@ function Ask-YesNo([string]$prompt, [string]$default = "n") {
     }
 }
 
+function Get-CalendarItemCount([string]$id) {
+    (Get-MailboxFolderStatistics -Identity $id -FolderScope Calendar |
+        Where-Object FolderType -eq "Calendar").ItemsInFolder
+}
+
 function Ensure-Module([string]$name) {
     if (-not (Get-Module -ListAvailable -Name $name)) {
         Write-Host "Installing module: $name" -ForegroundColor Yellow
@@ -108,7 +113,12 @@ Write-Host ""
 
 # -------------------------
 # 1) Convert mailbox type
+#    Existing calendar items are kept. Calendar processing below only
+#    applies to requests (new or updated) received after this point.
 # -------------------------
+$itemsBefore = Get-CalendarItemCount $Identity
+Write-Host "Calendar items before: $itemsBefore"
+
 $targetType = "$($Type)Mailbox"
 if ($mbx.RecipientTypeDetails -ne $targetType) {
     Set-Mailbox -Identity $Identity -Type $Type
@@ -167,6 +177,13 @@ if ($BlockSignIn) {
 # -------------------------
 # Verify
 # -------------------------
+$itemsAfter = Get-CalendarItemCount $Identity
+if ($itemsAfter -lt $itemsBefore) {
+    Write-Host "Warning: calendar items dropped from $itemsBefore to $itemsAfter" -ForegroundColor Yellow
+} else {
+    Write-Host "Calendar items after: $itemsAfter (existing meetings preserved)"
+}
+
 Write-Host ""
 Write-Host "✔ Conversion complete" -ForegroundColor Green
 Get-Mailbox -Identity $Identity | Format-List DisplayName, PrimarySmtpAddress, RecipientTypeDetails, ResourceCapacity
