@@ -34,6 +34,12 @@ Can also run a script to fix subjects for newly-created Meeting Room resource ma
 [View PowerShell Script](./RoomListManager.ps1)
 
 -----
+## Convert to Resource Mailbox
+Converts an existing mailbox to a Room or Workspace resource mailbox. Sets capacity, configures calendar auto-accept with real subjects visible, optionally adds it to a room list and blocks interactive sign-in.
+
+[View PowerShell Script](./ConvertToResourceMailbox.ps1)
+
+-----
 ## Anti-Spam Wizard
 Interactive wizard for setting up anti-spam and anti-phishing policies in Microsoft 365. Configures hosted content filter policies with tenant-wide or group-based scoping. Saves configuration to a JSON profile for easy re-runs.
 
